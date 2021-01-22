@@ -7,62 +7,60 @@ Public Class Form1
     Private memoData As New MemoData
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles Me.Load
-        memoData.Read()
+        memoTitles.DataSource = memoData.Table
+        memoTitles.DisplayMember = "Title"
 
-        lstMemoTitle.DataSource = memoData.memos
-        lstMemoTitle.DisplayMember = "Title"
-
-        ClearListSelection()
+        ClearMemo()
     End Sub
 
-    Private Sub showMemo(memo As Memo)
-        txtMemoTitle.Text = memo.Title
-        txtMemoDetail.Text = memo.Detail
+    Private Sub ClearMemo()
+        memoTitles.SelectedIndex = -1
+
+        memoTitle.Clear()
+        memoDetail.Clear()
     End Sub
 
-    Public Sub ClearListSelection()
-        lstMemoTitle.SelectedIndex = -1
-
-        txtMemoTitle.Clear()
-        txtMemoDetail.Clear()
+    Private Sub ShowMemo(datarow As DataRow)
+        memoTitle.Text = datarow("title").ToString
+        memoDetail.Text = datarow("detail").ToString
     End Sub
+
 
     'イベント処理
-    Private Sub lstMemoTitle_SelectedIndexChanged(sender As Object, e As EventArgs) Handles lstMemoTitle.SelectedIndexChanged
-        If lstMemoTitle.SelectedIndex = -1 Then
-            ClearListSelection()
+    Private Sub lstMemoTitle_SelectedIndexChanged(sender As Object, e As EventArgs) Handles memoTitles.SelectedIndexChanged
+        If memoTitles.SelectedIndex = -1 Then
+            ClearMemo()
         Else
-            showMemo( memoData.memos(lstMemoTitle.SelectedIndex) )
+            ShowMemo( memoData.TableRows(memoTitles.SelectedIndex) )
         End If
     End Sub
 End Class
 
-
-Public Class Memo
-    Public Property Id As Integer
-    Public Property Title As String
-    Public Property Detail As String
-
-    Public Sub New(datarow As DataRow)
-        Id     = CInt( datarow("id") )
-        Title  = CStr( datarow("title") )
-        Detail = CStr( datarow("detail") )
-    End Sub
-End Class
-
 Public Class MemoData
-    Public connection As String = "Data Source=INSPIRON5505;Initial Catalog=memo;Integrated Security=True"
-    Public query As String = "SELECT * FROM memo.dbo.memo ORDER BY memo.dbo.memo.id asc"
-    Public adapter As New SqlDataAdapter(query, connection)
-    Public dataset As New DataSet
-    Public memos As Memo()
+    Private _connection As New SqlConnection("Data Source=INSPIRON5505;Initial Catalog=memo;Integrated Security=True")
+    Private _dataSet As New DataSet
 
-    Public Sub Read() 
-        adapter.Fill(dataset, "memo")
-        ReDim memos(dataset.Tables("memo").Rows.Count - 1)
+    Public ReadOnly Property Table() As DataTable
+        Get
+            Return _dataSet.Tables(0)
+        End Get
+    End Property
 
-        For index = 0 To dataset.Tables("memo").Rows.Count - 1
-            memos(index) = New Memo(dataset.Tables("memo").Rows(index))
-        Next
+    Public ReadOnly Property TableRows() As DataRowCollection
+        Get
+            Return _dataSet.Tables(0).Rows
+        End Get
+    End Property
+
+    Public Sub New()
+        Read()
+    End Sub
+
+    Public Sub Read()
+        Dim queryString As String = "SELECT * FROM memo.dbo.memo ORDER BY memo.dbo.memo.id asc"
+        Dim adapter As New SqlDataAdapter(queryString, _connection)
+
+        _dataSet.Clear()
+        adapter.Fill(_dataSet)
     End Sub
 End Class
